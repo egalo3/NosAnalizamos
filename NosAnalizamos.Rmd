@@ -53,7 +53,7 @@ datos <- datos_brutos %>% filter(Id != "martsobm")
 nrow(datos) 
 ```
 
-# Limpiar calificaciones
+# 4. Limpiar calificaciones
 ```{r calificaciones-limpios}
 notas <- datos %>% select(ALG, ANM, FP, DCS, MD)
 
@@ -80,5 +80,21 @@ calif <- data.frame(
 head(calif)
 ```
 
+# 5. Tabla de estadísticos
+```{r tabla-estadisticos}
+# Crear tabla de estadísticos
+stats <- data.frame(
+  Asignatura = names(calif),
+  Min = round(sapply(calif, min, na.rm=T), 2),
+  P25 = round(sapply(calif, quantile, 0.25, na.rm=T), 2),
+  Mediana = round(sapply(calif, median, na.rm=T), 2),
+  Media = round(sapply(calif, mean, na.rm=T), 2),
+  DT = round(sapply(calif, sd, na.rm=T), 2),
+  P75 = round(sapply(calif, quantile, 0.75, na.rm=T), 2),
+  Max = round(sapply(calif, max, na.rm=T), 2)
+)
+
+kable(stats)
+```
 
 
