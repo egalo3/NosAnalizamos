@@ -1,0 +1,31 @@
+---
+title: "NosAnalizamos"
+author: "Eva Gamón López"
+date: "2026-05-22"
+output: html_document
+---
+
+# Librería
+```{r}
+library(pacman)
+library(tidyverse)
+library(GGally)
+library(knitr)
+library(kableExtra)
+```
+
+# 1. Carga de datos
+```{r carga}
+ruta <- "data/NosAutoanalizamos2022 - Hoja1 (1).tsv"
+lineas <- readLines(ruta, encoding = "UTF-8")
+
+fila_encabezado <- grep("FechaNac\\(DD-MM-YYY\\)", lineas)
+
+# Cargar
+datos_brutos <- read.delim(ruta,skip = fila_encabezado - 1, header = TRUE, sep = "\t", stringsAsFactors = FALSE)
+
+# Limpiar filas vacías
+datos_brutos <- datos_brutos %>% filter(!is.na(Id) & Id != "" & Id != "Id")
+
+nrow(datos_brutos)
+```
