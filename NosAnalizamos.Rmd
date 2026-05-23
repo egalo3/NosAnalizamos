@@ -107,3 +107,21 @@ save(calif, file = "Notas.Rdata")
 ggpairs(calif)
 ```
 
+# 8. Matrices de correlación
+```{r matriz-correlacion}
+# Pearson
+cor_pearson <- cor(calif, use = "pairwise.complete.obs")
+kable(round(cor_pearson, 3))
+
+# Spearman
+cor_spearman <- cor(calif, method = "spearman", use = "pairwise.complete.obs")
+kable(round(cor_spearman, 3))
+
+# Correlación más alta
+cor_sin_diag <- cor_pearson
+diag(cor_sin_diag) <- NA
+max_cor <- max(cor_sin_diag, na.rm=T)
+pos <- which(cor_sin_diag == max_cor, arr.ind=T)
+paste("Mayor correlación:", rownames(cor_sin_diag)[pos[1]], "y", 
+      colnames(cor_sin_diag)[pos[2]], "=", round(max_cor, 3))
+```
