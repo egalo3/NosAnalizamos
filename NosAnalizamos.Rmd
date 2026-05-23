@@ -97,4 +97,13 @@ stats <- data.frame(
 kable(stats)
 ```
 
+# 6. Guardar Notas.Rdata
+```{r guardar-notas}
+save(calif, file = "Notas.Rdata")
+```
+
+# 7. Gráfico ggpair
+```{r grafico-ggpair}
+ggpairs(calif)
+```
 
