@@ -15,7 +15,7 @@ pacman::p_load(tidyverse, GGally, knitr, kableExtra, lubridate)
 # 1. Carga de datos
 
 ```{r carga}
-anyo <- 2026
+anyo <- 2022
 ruta <- paste0("data/NosAutoanalizamos", anyo, " - Hoja1 (1).tsv")
 
 lineas <- readLines(ruta, encoding = "UTF-8")
