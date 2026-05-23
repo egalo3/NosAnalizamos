@@ -125,3 +125,23 @@ pos <- which(cor_sin_diag == max_cor, arr.ind=T)
 paste("Mayor correlación:", rownames(cor_sin_diag)[pos[1]], "y", 
       colnames(cor_sin_diag)[pos[2]], "=", round(max_cor, 3))
 ```
+
+# 9. Boxplot de calificaciones
+```{r boxplot-calificaciones}
+calif_largo <- calif %>% pivot_longer(everything(), names_to = "Asignatura", values_to = "Nota")
+
+ggplot(calif_largo, aes(x=Asignatura, y=Nota)) +
+  geom_boxplot(fill="lightblue") +
+  ylim(0,10)
+```
+
+# 10. Boxplot por sexo
+```{r boxplot-sexo}
+calif$Sexo <- datos$Sex
+
+calif_sexo <- calif %>% pivot_longer(ALG:MD, names_to="Asignatura", values_to="Nota")
+
+ggplot(calif_sexo, aes(x=Asignatura, y=Nota, fill=Sexo)) +
+  geom_boxplot() +
+  theme(axis.text.x = element_text(angle=45))
+```
