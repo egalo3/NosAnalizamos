@@ -12,6 +12,7 @@ library(tidyverse)
 library(GGally)
 library(knitr)
 library(kableExtra)
+library(lubridate)
 ```
 
 # 1. Carga de datos
@@ -163,6 +164,77 @@ ggplot(notas_largo, aes(x=Alumno, y=Nota, color=Asignatura, group=Asignatura)) +
   ylim(0,10)
 ```
 
+# 12. Preguntas:
+
+## P1. Edad más joven a 01/02/2026
+```{r p1}
+datos$Fecha <- dmy(datos$FechaNac..DD.MM.YYY.)
+
+edad <- as.numeric(difftime(as.Date("2026-02-01"), datos$Fecha, units="days"))/365.25
+paste("Edad mínima:", round(min(edad, na.rm=T), 2), "años")
+```
+
+## P2. Trabajan y estudian
+```{r p2}
+sum(datos$Hwork > 0, na.rm=T)
+```
+
+## P3. Fumadores por sexo
+```{r p3}
+mujeres_fuman <- sum(datos$Sex == "Femenino" & datos$Smoke == "Si", na.rm=T)
+hombres_fuman <- sum(datos$Sex == "Masculino" & datos$Smoke == "Si", na.rm=T)
+
+if(mujeres_fuman > hombres_fuman) "Más mujeres fumadoras" else "Más hombres fumadores"
+```
+
+## P4. Media y varianza de Wr.Hnd por sexo
+```{r p4}
+datos %>% group_by(Sex) %>% summarise(
+  Media = round(mean(Wr.Hnd, na.rm=T), 2),
+  Varianza = round(var(Wr.Hnd, na.rm=T), 2))
+```
+
+## P5. Relacion sexo y mano para escribir
+```{r p5}
+chisq.test(table(datos$Sex, datos$NW.Hnd))
+```
+
+## P6. Correlación Height y Wr.Hnd
+```{r p6}
+cor(datos$Height, datos$Wr.Hnd, use="complete.obs")
+```
+
+## P7. Outliers en Height (Hampel)
+```{r p7}
+med <- median(datos$Height, na.rm=T)
+mad_val <- mad(datos$Height, na.rm=T)
+outliers <- which(abs(datos$Height - med) > 4.5 * mad_val)
+if(length(outliers)>0) paste("Outliers:", length(outliers)) else "Sin outliers"
+```
+
+## P8. Media para imputar FP
+```{r p8}
+mean(calif$FP, na.rm=T)
+```
+
+## P9. Imputación por PulseCat
+```{r p9}
+datos$PulseCat <- ifelse(datos$Pulse >= 65, "PulseH", "PulseL")
+
+media_H <- mean(calif$FP[datos$Pulse >= 65], na.rm=T)
+media_L <- mean(calif$FP[datos$Pulse < 65], na.rm=T)
+
+paste("PulseH (>65):", round(media_H,2))
+paste("PulseL (<65):", round(media_L,2))
+```
+
+## P10. Relación ritmo cardíaco y ALG
+```{r p10}
+cor_alg_pulse <- cor(datos$Pulse, calif$ALG, use="complete.obs")
+cor_alg_pulse
+
+if(abs(cor_alg_pulse) < 0.3) "No hay relación lineal relevante"
+```
 
 
 
