@@ -5,236 +5,335 @@ date: "2026-05-22"
 output: html_document
 ---
 
-# Librería
-```{r}
-library(pacman)
-library(tidyverse)
-library(GGally)
-library(knitr)
-library(kableExtra)
-library(lubridate)
+# Librerías
+
+```{r librerias}
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(tidyverse, GGally, knitr, kableExtra, lubridate)
 ```
 
 # 1. Carga de datos
+
 ```{r carga}
-ruta <- "data/NosAutoanalizamos2022 - Hoja1 (1).tsv"
+anyo <- 2026
+ruta <- paste0("data/NosAutoanalizamos", anyo, " - Hoja1 (1).tsv")
+
 lineas <- readLines(ruta, encoding = "UTF-8")
+fila_encabezado <- grep("Id\tAge\tSex", lineas)[1]
 
-fila_encabezado <- grep("FechaNac\\(DD-MM-YYY\\)", lineas)
+datos_brutos <- read.delim(
+  ruta,
+  skip = fila_encabezado - 1,
+  header = TRUE,
+  sep = "\t",
+  stringsAsFactors = FALSE,
+  fileEncoding = "UTF-8"
+)
 
-# Cargar
-datos_brutos <- read.delim(ruta,skip = fila_encabezado - 1, header = TRUE, sep = "\t", stringsAsFactors = FALSE)
-
-# Limpiar filas vacías
-datos_brutos <- datos_brutos %>% filter(!is.na(Id) & Id != "" & Id != "Id")
+datos_brutos <- datos_brutos %>%
+  filter(!is.na(Id) & Id != "" & Id != "Id")
 
 nrow(datos_brutos)
 ```
 
-# 2. Limpieza numeros 
-```{r limpiar}
-# limpiar números
-limpiar_num <- function(x) {
-  if(is.character(x)) {
-    x <- gsub(",", ".", x)
-    x <- as.numeric(x)}
-  return(x)}
+# 2. Eliminar usuario martsobm
 
-cols_num <- c("Age", "Wr.Hnd", "Pulse", "Height", "ALG", "ANM", "FP", "DCS", "MD", "HSt", "Hwork")
-
-# Limpiar columnas
-for(col in cols_num) {
-  if(col %in% names(datos_brutos)) {
-    datos_brutos[[col]] <- limpiar_num(datos_brutos[[col]])}}
-```
-
-# 3. Eliminar usuario martsobm
 ```{r eliminar}
 datos <- datos_brutos %>% filter(Id != "martsobm")
-nrow(datos) 
+nrow(datos)
+```
+
+# 3. Limpiar variables numéricas (excepto notas)
+
+```{r limpiar-numericas}
+
+limpiar_num <- function(x) {
+  if (is.character(x)) {
+    x <- gsub(",", ".", x)
+    x <- suppressWarnings(as.numeric(x))
+  }
+  return(x)
+}
+
+cols_num <- c("Age", "Wr.Hnd", "Pulse", "Height", "HSt", "Hwork")
+
+for (col in cols_num) {
+  if (col %in% names(datos)) {
+    datos[[col]] <- limpiar_num(datos[[col]])
+  }
+}
 ```
 
 # 4. Limpiar calificaciones
-```{r calificaciones-limpios}
-notas <- datos %>% select(ALG, ANM, FP, DCS, MD)
 
+```{r calificaciones-limpias}
 limpia_nota <- function(x) {
-  if(is.na(x)) return(NA)
-  if(x == "NC") return(3)
-  if(x == "NP") return(NA)
-  if(grepl("pico", x)) return(NA)
+  x <- trimws(as.character(x))        
+  if (is.na(x) || x == "" || x == "NA") return(NA)
+  if (x == "NC") return(3)       
+  if (x == "NP") return(NA)    
   
-  x <- gsub(",", ".", as.character(x))
-  num <- as.numeric(x)
+  x <- gsub(",", ".", x)         
+  num <- suppressWarnings(as.numeric(x))
   
-  if(is.na(num)) return(NA)
-  if(num < 0 | num > 10) return(NA)
-  return(num)}
+  if (is.na(num)) return(NA)       
+  if (num < 0 | num > 10) return(NA)
+  return(num)
+}
 
 calif <- data.frame(
-  ALG = sapply(notas$ALG, limpia_nota),
-  ANM = sapply(notas$ANM, limpia_nota),
-  FP = sapply(notas$FP, limpia_nota),
-  DCS = sapply(notas$DCS, limpia_nota),
-  MD = sapply(notas$MD, limpia_nota))
+  ALG = sapply(datos$ALG, limpia_nota),
+  ANM = sapply(datos$ANM, limpia_nota),
+  FP  = sapply(datos$FP,  limpia_nota),
+  DCS = sapply(datos$DCS, limpia_nota),
+  MD  = sapply(datos$MD,  limpia_nota)
+)
 
 head(calif)
 ```
 
-# 5. Tabla de estadísticos
-```{r tabla-estadisticos}
-# Crear tabla de estadísticos
-stats <- data.frame(
-  Asignatura = names(calif),
-  Min = round(sapply(calif, min, na.rm=T), 2),
-  P25 = round(sapply(calif, quantile, 0.25, na.rm=T), 2),
-  Mediana = round(sapply(calif, median, na.rm=T), 2),
-  Media = round(sapply(calif, mean, na.rm=T), 2),
-  DT = round(sapply(calif, sd, na.rm=T), 2),
-  P75 = round(sapply(calif, quantile, 0.75, na.rm=T), 2),
-  Max = round(sapply(calif, max, na.rm=T), 2)
-)
+# 5. Guardar Notas.Rdata
 
-kable(stats)
-```
-
-# 6. Guardar Notas.Rdata
 ```{r guardar-notas}
 save(calif, file = "Notas.Rdata")
 ```
 
-# 7. Gráfico ggpair
-```{r grafico-ggpair}
+# 6. Tabla de estadísticos
+
+```{r tabla-estadisticos}
+stats <- data.frame(
+  Asignatura = names(calif),
+  Min = round(sapply(calif, min, na.rm = TRUE), 2),
+  P25 = round(sapply(calif, quantile, 0.25, na.rm = TRUE), 2),
+  Mediana = round(sapply(calif, median, na.rm = TRUE), 2),
+  Media = round(sapply(calif, mean, na.rm = TRUE), 2),
+  DT = round(sapply(calif, sd, na.rm = TRUE), 2),
+  P75 = round(sapply(calif, quantile, 0.75, na.rm = TRUE), 2),
+  Max = round(sapply(calif, max, na.rm = TRUE), 2))
+
+kable(stats, digits = 2)
+```
+
+# 7. Gráfico ggpairs
+
+```{r grafico-ggpair, message=FALSE, warning=FALSE}
 ggpairs(calif)
 ```
 
-# 8. Matrices de correlación
-```{r matriz-correlacion}
+# 8. Matrices de correlación y covarianza
+
+```{r matrices-correlacion}
 # Pearson
-cor_pearson <- cor(calif, use = "pairwise.complete.obs")
+cor_pearson <- cor(calif, use = "pairwise.complete.obs", method = "pearson")
+cat("Correlación Pearson:\n")
 kable(round(cor_pearson, 3))
 
 # Spearman
-cor_spearman <- cor(calif, method = "spearman", use = "pairwise.complete.obs")
+cor_spearman <- cor(calif, use = "pairwise.complete.obs", method = "spearman")
+cat("Correlación Spearman:\n")
 kable(round(cor_spearman, 3))
 
-# Correlación más alta
+# Covarianza
+cov_mat <- cov(calif, use = "pairwise.complete.obs")
+cat("Covarianza:\n")
+kable(round(cov_mat, 3))
+
 cor_sin_diag <- cor_pearson
 diag(cor_sin_diag) <- NA
-max_cor <- max(cor_sin_diag, na.rm=T)
-pos <- which(cor_sin_diag == max_cor, arr.ind=T)
-paste("Mayor correlación:", rownames(cor_sin_diag)[pos[1]], "y", 
-      colnames(cor_sin_diag)[pos[2]], "=", round(max_cor, 3))
+max_cor <- max(cor_sin_diag, na.rm = TRUE)
+pos <- which(cor_sin_diag == max_cor, arr.ind = TRUE)
+paste("Mayor correlación Pearson:",
+      rownames(cor_sin_diag)[pos[1,1]], "y",
+      colnames(cor_sin_diag)[pos[1,2]], "=", round(max_cor, 3))
 ```
 
 # 9. Boxplot de calificaciones
-```{r boxplot-calificaciones}
-calif_largo <- calif %>% pivot_longer(everything(), names_to = "Asignatura", values_to = "Nota")
 
-ggplot(calif_largo, aes(x=Asignatura, y=Nota)) +
-  geom_boxplot(fill="lightblue") +
-  ylim(0,10)
+```{r boxplot-calificaciones}
+calif_largo <- calif %>%
+  pivot_longer(everything(), names_to = "Asignatura", values_to = "Nota")
+
+ggplot(calif_largo, aes(x = Asignatura, y = Nota)) +
+  geom_boxplot(fill = "lightblue") +
+  ylim(0, 10) +
+  labs(title = "Calificaciones por asignatura") +
+  theme_minimal()
 ```
 
 # 10. Boxplot por sexo
+
 ```{r boxplot-sexo}
 calif$Sexo <- datos$Sex
 
-calif_sexo <- calif %>% pivot_longer(ALG:MD, names_to="Asignatura", values_to="Nota")
+calif_sexo <- calif %>%
+  pivot_longer(ALG:MD, names_to = "Asignatura", values_to = "Nota")
 
-ggplot(calif_sexo, aes(x=Asignatura, y=Nota, fill=Sexo)) +
+ggplot(calif_sexo, aes(x = Asignatura, y = Nota, fill = Sexo)) +
   geom_boxplot() +
-  theme(axis.text.x = element_text(angle=45))
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Calificaciones por asignatura y sexo")
 ```
 
-# 11. Alumnos sin NA en todas las notas
-```{r alumnosNA}
-completos <- complete.cases(calif[,1:5])
+# 11. Alumnos con calificaciones en todas las asignaturas
+
+```{r alumnos-completos}
+completos <- complete.cases(calif[, 1:5])
 notas_completas <- calif[completos, 1:5]
 alumnos <- datos$Id[completos]
 
 notas_largo <- notas_completas %>%
   mutate(Alumno = alumnos) %>%
-  pivot_longer(ALG:MD, names_to="Asignatura", values_to="Nota")
+  pivot_longer(ALG:MD, names_to = "Asignatura", values_to = "Nota")
 
-# Gráfico
-ggplot(notas_largo, aes(x=Alumno, y=Nota, color=Asignatura, group=Asignatura)) +
-  geom_line() + geom_point() +
-  theme(axis.text.x = element_text(angle=90, size=6)) +
-  ylim(0,10)
+ggplot(notas_largo, aes(x = Alumno, y = Nota, color = Asignatura, group = Asignatura)) +
+  geom_line() +
+  geom_point() +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, size = 6, vjust = 0.5)) +
+  ylim(0, 10) +
+  labs(title = "Calificaciones por alumno y asignatura")
 ```
 
-# 12. Preguntas:
+# 12. Preguntas (datos del curso 2026)
 
-## P1. Edad más joven a 01/02/2026
+## P1. Edad del alumno más joven a 01/02/2026
+
 ```{r p1}
-datos$Fecha <- dmy(datos$FechaNac..DD.MM.YYY.)
+# Buscar la columna de fecha por nombre parcial (evita problemas con caracteres especiales)
+col_fecha <- grep("FechaNac", names(datos), value = TRUE)[1]
+datos$Fecha <- dmy(datos[[col_fecha]])
 
-edad <- as.numeric(difftime(as.Date("2026-02-01"), datos$Fecha, units="days"))/365.25
-paste("Edad mínima:", round(min(edad, na.rm=T), 2), "años")
+fecha_ref <- as.Date("2026-02-01")
+edad <- as.numeric(difftime(fecha_ref, datos$Fecha, units = "days")) / 365.25
+
+paste("Edad mínima:", round(min(edad, na.rm = TRUE), 2), "años")
 ```
 
-## P2. Trabajan y estudian
+## P2. Alumnos que trabajan y estudian
+
 ```{r p2}
-sum(datos$Hwork > 0, na.rm=T)
+n_trabajan <- sum(datos$Hwork > 0, na.rm = TRUE)
+paste("Alumnos que simultanean trabajo y estudios:", n_trabajan)
 ```
 
-## P3. Fumadores por sexo
-```{r p3}
-mujeres_fuman <- sum(datos$Sex == "Femenino" & datos$Smoke == "Si", na.rm=T)
-hombres_fuman <- sum(datos$Sex == "Masculino" & datos$Smoke == "Si", na.rm=T)
+## P3. ¿Hay más hombres o más mujeres fumadoras?
 
-if(mujeres_fuman > hombres_fuman) "Más mujeres fumadoras" else "Más hombres fumadores"
+```{r p3}
+mujeres_fuman <- sum(datos$Sex == "F" & datos$Smoke == "Si", na.rm = TRUE)
+hombres_fuman <- sum(datos$Sex == "M" & datos$Smoke == "Si", na.rm = TRUE)
+
+paste("Mujeres fumadoras:", mujeres_fuman)
+paste("Hombres fumadores:", hombres_fuman)
+
+if (mujeres_fuman > hombres_fuman) {
+  "Hay más mujeres fumadoras"
+} else if (hombres_fuman > mujeres_fuman) {
+  "Hay más hombres fumadores"
+} else {
+  "Igual número de hombres y mujeres fumadores"
+}
 ```
 
 ## P4. Media y varianza de Wr.Hnd por sexo
+
 ```{r p4}
-datos %>% group_by(Sex) %>% summarise(
-  Media = round(mean(Wr.Hnd, na.rm=T), 2),
-  Varianza = round(var(Wr.Hnd, na.rm=T), 2))
+datos %>%
+  group_by(Sex) %>%
+  summarise(
+    Media    = round(mean(Wr.Hnd, na.rm = TRUE), 2),
+    Varianza = round(var(Wr.Hnd,  na.rm = TRUE), 2)
+  ) %>%
+  kable()
 ```
 
-## P5. Relacion sexo y mano para escribir
+## P5. ¿Existe relación entre sexo y mano con la que se escribe (NW.Hnd)?
+
 ```{r p5}
-chisq.test(table(datos$Sex, datos$NW.Hnd))
+tabla_sex_mano <- table(datos$Sex, datos$NW.Hnd)
+tabla_sex_mano
+
+# Chi-cuadrado 
+test_chi <- chisq.test(tabla_sex_mano)
+test_chi
+
+if (test_chi$p.value < 0.05) {
+  "p < 0.05: existe relación estadísticamente significativa entre sexo y mano"
+} else {
+  "p >= 0.05: no hay evidencia de relación entre sexo y mano"
+}
 ```
 
-## P6. Correlación Height y Wr.Hnd
+## P6. ¿Existe relación lineal entre Height y Wr.Hnd?
+
 ```{r p6}
-cor(datos$Height, datos$Wr.Hnd, use="complete.obs")
+cor_hw <- cor.test(datos$Height, datos$Wr.Hnd, use = "complete.obs")
+cor_hw
+
+paste("Correlación de Pearson:", round(cor_hw$estimate, 3),
+      "| p-valor:", round(cor_hw$p.value, 4))
 ```
 
-## P7. Outliers en Height (Hampel)
+## P7. ¿El identificador de Hampel detecta outliers en Height?
+
 ```{r p7}
-med <- median(datos$Height, na.rm=T)
-mad_val <- mad(datos$Height, na.rm=T)
-outliers <- which(abs(datos$Height - med) > 4.5 * mad_val)
-if(length(outliers)>0) paste("Outliers:", length(outliers)) else "Sin outliers"
+# Identificador de Hampel: umbral estándar = 3 × MAD
+med_h <- median(datos$Height, na.rm = TRUE)
+mad_h <- mad(datos$Height,    na.rm = TRUE)
+outliers <- which(abs(datos$Height - med_h) > 3 * mad_h)
+
+if (length(outliers) > 0) {
+  paste("Outliers detectados:", length(outliers),
+        "| Ids:", paste(datos$Id[outliers], collapse = ", "),
+        "| Alturas:", paste(datos$Height[outliers], collapse = ", "))
+} else {
+  "El identificador de Hampel no detecta ningún outlier en Height"
+}
 ```
 
-## P8. Media para imputar FP
+## P8. Valor para imputación generalizada de FP (media)
+
 ```{r p8}
-mean(calif$FP, na.rm=T)
+media_FP <- mean(calif$FP, na.rm = TRUE)
+paste("Valor a usar para imputación generalizada de FP (media):", round(media_FP, 2))
 ```
 
-## P9. Imputación por PulseCat
+## P9. Imputación por casos similares según PulseCat
+
 ```{r p9}
 datos$PulseCat <- ifelse(datos$Pulse >= 65, "PulseH", "PulseL")
 
-media_H <- mean(calif$FP[datos$Pulse >= 65], na.rm=T)
-media_L <- mean(calif$FP[datos$Pulse < 65], na.rm=T)
+media_FP_H <- mean(calif$FP[datos$PulseCat == "PulseH"], na.rm = TRUE)
+media_FP_L <- mean(calif$FP[datos$PulseCat == "PulseL"], na.rm = TRUE)
 
-paste("PulseH (>65):", round(media_H,2))
-paste("PulseL (<65):", round(media_L,2))
+paste("Imputación para PulseH (Pulse >= 65):", round(media_FP_H, 2))
+paste("Imputación para PulseL (Pulse < 65):", round(media_FP_L, 2))
 ```
 
-## P10. Relación ritmo cardíaco y ALG
+## P10. ¿Existe relación lineal entre Pulse y ALG?
+
 ```{r p10}
-cor_alg_pulse <- cor(datos$Pulse, calif$ALG, use="complete.obs")
-cor_alg_pulse
+test_pulse_alg <- cor.test(datos$Pulse, calif$ALG, use = "complete.obs")
+test_pulse_alg
 
-if(abs(cor_alg_pulse) < 0.3) "No hay relación lineal relevante"
+r <- round(test_pulse_alg$estimate, 3)
+pv <- round(test_pulse_alg$p.value, 4)
+
+cat(paste0(
+  "Correlación de Pearson entre Pulse y ALG: r = ", r,
+  ", p-valor = ", pv, "\n\n",
+  "Conclusión: ",
+  if (abs(r) < 0.3 | pv >= 0.05) {
+    paste0("El coeficiente de correlación es muy bajo (r = ", r, ") y/o ",
+           "no es estadísticamente significativo (p = ", pv, "). ",
+           "Los datos NO apoyan la existencia de una relación lineal directa ",
+           "entre el ritmo cardíaco y las calificaciones en ALG. ",
+           "La afirmación planteada no está respaldada por los datos.")
+  } else {
+    paste0("Existe cierta correlación (r = ", r, ", p = ", pv, "), ",
+           "aunque la magnitud debe interpretarse con cautela y no implica causalidad.")
+  }
+))
 ```
-
 
 
