@@ -47,3 +47,9 @@ for(col in cols_num) {
     datos_brutos[[col]] <- limpiar_num(datos_brutos[[col]])}}
 ```
 
+# 3. Eliminar usuario martsobm
+```{r eliminar}
+datos <- datos_brutos %>% filter(Id != "martsobm")
+nrow(datos) 
+```
+
