@@ -29,3 +29,21 @@ datos_brutos <- datos_brutos %>% filter(!is.na(Id) & Id != "" & Id != "Id")
 
 nrow(datos_brutos)
 ```
+
+# 2. Limpieza numeros 
+```{r limpiar}
+# limpiar números
+limpiar_num <- function(x) {
+  if(is.character(x)) {
+    x <- gsub(",", ".", x)
+    x <- as.numeric(x)}
+  return(x)}
+
+cols_num <- c("Age", "Wr.Hnd", "Pulse", "Height", "ALG", "ANM", "FP", "DCS", "MD", "HSt", "Hwork")
+
+# Limpiar columnas
+for(col in cols_num) {
+  if(col %in% names(datos_brutos)) {
+    datos_brutos[[col]] <- limpiar_num(datos_brutos[[col]])}}
+```
+
