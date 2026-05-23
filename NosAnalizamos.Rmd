@@ -145,3 +145,24 @@ ggplot(calif_sexo, aes(x=Asignatura, y=Nota, fill=Sexo)) +
   geom_boxplot() +
   theme(axis.text.x = element_text(angle=45))
 ```
+
+# 11. Alumnos sin NA en todas las notas
+```{r alumnosNA}
+completos <- complete.cases(calif[,1:5])
+notas_completas <- calif[completos, 1:5]
+alumnos <- datos$Id[completos]
+
+notas_largo <- notas_completas %>%
+  mutate(Alumno = alumnos) %>%
+  pivot_longer(ALG:MD, names_to="Asignatura", values_to="Nota")
+
+# Gráfico
+ggplot(notas_largo, aes(x=Alumno, y=Nota, color=Asignatura, group=Asignatura)) +
+  geom_line() + geom_point() +
+  theme(axis.text.x = element_text(angle=90, size=6)) +
+  ylim(0,10)
+```
+
+
+
+
