@@ -53,3 +53,32 @@ datos <- datos_brutos %>% filter(Id != "martsobm")
 nrow(datos) 
 ```
 
+# Limpiar calificaciones
+```{r calificaciones-limpios}
+notas <- datos %>% select(ALG, ANM, FP, DCS, MD)
+
+limpia_nota <- function(x) {
+  if(is.na(x)) return(NA)
+  if(x == "NC") return(3)
+  if(x == "NP") return(NA)
+  if(grepl("pico", x)) return(NA)
+  
+  x <- gsub(",", ".", as.character(x))
+  num <- as.numeric(x)
+  
+  if(is.na(num)) return(NA)
+  if(num < 0 | num > 10) return(NA)
+  return(num)}
+
+calif <- data.frame(
+  ALG = sapply(notas$ALG, limpia_nota),
+  ANM = sapply(notas$ANM, limpia_nota),
+  FP = sapply(notas$FP, limpia_nota),
+  DCS = sapply(notas$DCS, limpia_nota),
+  MD = sapply(notas$MD, limpia_nota))
+
+head(calif)
+```
+
+
+
